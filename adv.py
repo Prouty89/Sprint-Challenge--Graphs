@@ -1,23 +1,23 @@
 from room import Room
 from player import Player
 from world import World
+from util import Queue, Stack
 
-import random
+import random  # Shuffle
 from ast import literal_eval
 
 # Load world
 world = World()
 
-
 # You may uncomment the smaller graphs for development and testing purposes.
 # map_file = "maps/test_line.txt"
 # map_file = "maps/test_cross.txt"
-# map_file = "maps/test_loop.txt"
+# map_file = "maps/test_loop.txt"  # Try first
 # map_file = "maps/test_loop_fork.txt"
 map_file = "maps/main_maze.txt"
 
 # Loads the map into a dictionary
-room_graph=literal_eval(open(map_file, "r").read())
+room_graph = literal_eval(open(map_file, "r").read())
 world.load_graph(room_graph)
 
 # Print an ASCII map
@@ -26,10 +26,78 @@ world.print_rooms()
 player = Player(world.starting_room)
 
 # Fill this out with directions to walk
-# traversal_path = ['n', 'n']
+# traversal_path = ['n', 's', 'e', 'w']
 traversal_path = []
+print("Traversal Path:", traversal_path)
 
 
+# DFS for unexplored room
+# Begin with algorithm that picks an unexplored room (random)
+# Include direction from the players current room, moves and logs travelling direction and loops.
+
+
+# DFS - STACK remembers inherently where it should go when reaching a dead end.
+
+# Returns the opposite direction (i.e. 'n' -> 's')
+def get_opposite_direction(direction):
+    if direction == 'n':
+        return 's'
+    elif direction == 's':
+        return 'n'
+    elif direction == 'w':
+        return 'e'
+    elif direction == 'e':
+        return 'w'
+
+
+# Generates a traversal path to explore all rooms
+def generate_traversal_path(graph):
+
+    generated_path = []  # Empty Stack for generated path
+
+    backtrack = []  # Stack for backtracking
+
+    visited = {}  # Empty dict for tracking visited.
+
+    unexplored = {}  # Track unexplored paths
+
+    # Run while there are unexplored rooms
+    while len(visited) < len(room_graph):
+        # Add the starting point to visited and unexplored
+        if len(visited) == 0:
+            current_room = player.current_room.id
+            current_exits = player.current_room.get_exits()
+            visited[current_room] = current_exits
+            unexplored[current_room] = current_exits
+
+        # Check to see if the current room has been visited
+        if player.current_room.id not in visited:
+            # Add current room to unexplored and visited
+            visited[player.current_room.id] = player.current_room.get_exits()
+            unexplored[player.current_room.id] = player.current_room.get_exits()
+
+        # No directions, so backtrack
+        while len(unexplored[player.current_room.id]) < 1:
+            opposite_direction = backtrack.pop()
+            generated_path.append(opposite_direction)
+            player.travel(opposite_direction)
+
+        # Grab a direction to move in
+        move = unexplored[player.current_room.id].pop()
+        # Add it to the path
+        generated_path.append(move)
+        # Add the opposite of the move to the backtrack list
+        # backtrack when there are no rooms to explore
+        backtrack.append(get_opposite_direction(move))
+        # Moves the player to the room to update the current room
+        player.travel(move)
+
+    # Returns a list of directions
+    return generated_path
+
+
+# Update traversal_path
+traversal_path.extend(generate_traversal_path(room_graph))
 
 # TRAVERSAL TEST
 visited_rooms = set()
@@ -45,8 +113,6 @@ if len(visited_rooms) == len(room_graph):
 else:
     print("TESTS FAILED: INCOMPLETE TRAVERSAL")
     print(f"{len(room_graph) - len(visited_rooms)} unvisited rooms")
-
-
 
 #######
 # UNCOMMENT TO WALK AROUND
